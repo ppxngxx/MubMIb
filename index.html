@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Tutor | ติวเตอร์ AI</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&family=Prompt:wght@500;700&display=swap');
+    body {
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+      background: linear-gradient(135deg, #a7bfff 0%, #f7f7fb 100%);
+      margin: 0;
+      min-height: 100vh;
+      letter-spacing: 0.01em;
+    }
+    .chat-container {
+      max-width: 700px;
+      margin: 32px auto;
+      background: #fff;
+      border-radius: 22px;
+      box-shadow: 0 8px 32px #0002, 0 2px 8px #2563eb22;
+      display: flex;
+      flex-direction: column;
+      height: 88vh;
+      overflow: hidden;
+      border: 2.5px solid #a7bfff;
+      position: relative;
+      transition: box-shadow 0.2s;
+    }
+    .chat-container::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: 22px;
+      box-shadow: 0 0 0 4px #fff3, 0 0 0 8px #a7bfff22;
+      z-index: 0;
+    }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 24px 0 24px;
+      background: linear-gradient(90deg, #f1f5ff 60%, #f7f7fb 100%);
+      border-radius: 22px 22px 0 0;
+      min-height: 56px;
+      box-shadow: 0 2px 8px #2563eb0a;
+      position: relative;
+      z-index: 1;
+    }
+    .history-btn, .fav-btn {
+      background: #fff;
+      color: #2563eb;
+      border: 2px solid #a7bfff;
+      border-radius: 10px;
+      padding: 7px 16px;
+      cursor: pointer;
+      font-size: 1.01rem;
+      font-weight: 600;
+      transition: background 0.18s, color 0.18s, border 0.18s;
+      outline: none;
+      box-shadow: 0 1px 4px #2563eb11;
+      letter-spacing: 0.01em;
+    }
+    .history-btn:hover, .fav-btn:hover {
+      background: #a7bfff;
+      color: #fff;
+      border: 2px solid #2563eb;
+    }
+    .history-btn:active, .fav-btn:active {
+      background: #2563eb;
+      color: #fff;
+      border: 2px solid #2563eb;
+    }
+    #xp-indicator {
+      margin-left: auto;
+      font-weight: 700;
+      color: #f59e42;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: #fff7ed;
+      border-radius: 10px;
+      padding: 6px 16px 6px 12px;
+      box-shadow: 0 1px 4px #f59e4211;
+      font-size: 1.08em;
+      border: 1.5px solid #fbbf24;
+      letter-spacing: 0.01em;
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 32px 18px 32px;
+      background: linear-gradient(135deg, #f7f7fb 80%, #a7bfff 100%);
+      scroll-behavior: smooth;
+      z-index: 1;
+    }
+    .message {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      position: relative;
+    }
+    .user {
+      align-items: flex-end;
+    }
+    .ai {
+      align-items: flex-start;
+    }
+    .bubble {
+      display: inline-block;
+      padding: 13px 18px;
+      border-radius: 18px;
+      max-width: 90%;
+      font-size: 1.08rem;
+      box-shadow: 0 1px 6px #2563eb0a;
+      word-break: break-word;
+      position: relative;
+      transition: background 0.2s;
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+      line-height: 1.7;
+    }
+    .user .bubble {
+      background: linear-gradient(90deg, #a7bfff 80%, #f0f9ff 100%);
+      color: #222;
+      border-bottom-right-radius: 4px;
+      border-top-right-radius: 18px;
+      border-top-left-radius: 18px;
+      border-bottom-left-radius: 18px;
+      align-self: flex-end;
+      margin-left: 40px;
+      border: 1.5px solid #a7bfff;
+    }
+    .ai .bubble {
+      background: linear-gradient(90deg, #f1f5f9 80%, #e0e7ff 100%);
+      color: #222;
+      border-bottom-left-radius: 4px;
+      border-top-right-radius: 18px;
+      border-top-left-radius: 18px;
+      border-bottom-right-radius: 18px;
+      align-self: flex-start;
+      margin-right: 40px;
+      border: 1.5px solid #e0e7ff;
+    }
+    .step {
+      margin: 7px 0;
+      font-size: 1.04em;
+      line-height: 1.8;
+      font-family: 'Sarabun', sans-serif;
+      color: #374151;
+    }
+    .input-area {
+      display: flex;
+      border-top: 2px solid #a7bfff;
+      padding: 18px 18px 18px 18px;
+      background: #f7f7fb;
+      border-radius: 0 0 22px 22px;
+      gap: 10px;
+      box-shadow: 0 -2px 8px #2563eb0a;
+      z-index: 1;
+    }
+    .input-area input {
+      flex: 1;
+      padding: 13px 18px;
+      border-radius: 12px;
+      border: 2px solid #a7bfff;
+      font-size: 1.09rem;
+      background: #fff;
+      transition: border 0.2s, box-shadow 0.2s;
+      outline: none;
+      box-shadow: 0 1px 4px #2563eb11;
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+    }
+    .input-area input:focus {
+      border: 2px solid #2563eb;
+      box-shadow: 0 2px 8px #2563eb22;
+    }
+    .input-area button {
+      padding: 13px 24px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(90deg, #2563eb 80%, #60a5fa 100%);
+      color: #fff;
+      font-size: 1.09rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 4px #2563eb22;
+      outline: none;
+      letter-spacing: 0.01em;
+    }
+    .input-area button:hover {
+      background: linear-gradient(90deg, #1d4ed8 80%, #60a5fa 100%);
+    }
+    .input-area button:active {
+      background: #1d4ed8;
+    }
+    .quiz-btn {
+      margin: 0 0 12px 0;
+      background: linear-gradient(90deg, #f59e42 80%, #fbbf24 100%);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 20px;
+      cursor: pointer;
+      font-size: 1.04rem;
+      font-weight: 700;
+      box-shadow: 0 1px 4px #f59e4211;
+      transition: background 0.2s;
+      letter-spacing: 0.01em;
+      margin-left: 2px;
+    }
+    .quiz-btn:hover {
+      background: linear-gradient(90deg, #ea580c 80%, #fbbf24 100%);
+    }
+    .quiz-btn:active {
+      background: #ea580c;
+    }
+    .fav-star {
+      color: #f59e42;
+      margin-left: 8px;
+      cursor: pointer;
+      font-size: 1.18em;
+      vertical-align: middle;
+      transition: color 0.2s;
+    }
+    .fav-star.filled {
+      color: #ea580c;
+      text-shadow: 0 1px 4px #f59e4211;
+    }
+    .modal-bg {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: #0006; display: flex; align-items: center; justify-content: center; z-index: 1000;
+      animation: fadeIn 0.2s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal {
+      background: #fff;
+      border-radius: 18px;
+      padding: 32px 24px 24px 24px;
+      min-width: 320px;
+      max-width: 98vw;
+      max-height: 70vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 24px #2563eb22, 0 1.5px 6px #2563eb11;
+      animation: popIn 0.2s;
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.95); opacity: 0.7; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal h3 {
+      margin-top: 0;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 0.5px;
+      font-size: 1.18em;
+    }
+    .modal .close-btn {
+      float: right;
+      background: none;
+      border: none;
+      font-size: 1.3rem;
+      color: #888;
+      cursor: pointer;
+      margin-top: -8px;
+      margin-right: -8px;
+      transition: color 0.2s;
+    }
+    .modal .close-btn:hover {
+      color: #2563eb;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      background: #f1f5ff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #a7bfff;
+      border-radius: 6px;
+    }
+    ::selection {
+      background: #a7bfff;
+      color: #fff;
+    }
+    /* Responsive */
+    @media (max-width: 900px) {
+      .chat-container { max-width: 99vw; }
+      .chat-messages { padding: 18px 4vw 12px 4vw; }
+    }
+    @media (max-width: 700px) {
+      .chat-container { max-width: 100vw; margin: 0; border-radius: 0; }
+      .top-bar, .input-area { border-radius: 0; }
+      .modal { min-width: 90vw; }
+      .chat-messages { padding: 18px 4vw 12px 4vw; }
+    }
+    /* Youthful touch */
+    .bubble, .quiz-btn, .history-btn, .fav-btn, #xp-indicator {
+      font-family: 'Prompt', 'Sarabun', sans-serif;
+      letter-spacing: 0.01em;
+    }
+    .bubble code, .step code {
+      background: #f1f5ff;
+      color: #2563eb;
+      border-radius: 5px;
+      padding: 2px 6px;
+      font-size: 0.98em;
+      font-family: 'Fira Mono', 'Consolas', monospace;
+    }
+  </style>
+  <!-- MathJax CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="top-bar">
+      <button class="history-btn" id="history-btn">ประวัติการถาม</button>
+      <button class="fav-btn" id="fav-btn">คำถามโปรด</button>
+      <span id="xp-indicator" style="margin-left:auto;font-weight:500;color:#f59e42;display:flex;align-items:center;gap:4px;">
+        <span style="font-size:1.2em;">🏅</span>
+        <span id="xp-value">0</span> XP
+      </span>
+    </div>
+    <div class="chat-messages" id="chat">
+      <!-- ข้อความจะแสดงที่นี่ -->
+    </div>
+    <div class="input-area">
+      <input id="user-input" type="text" placeholder="พิมพ์คำถาม เช่น 'จงแก้สมการ x² + 3x = 0' หรือ 'แปลคำว่า Assume'..." autocomplete="off" />
+      <button id="send-btn">ส่ง</button>
+    </div>
+  </div>
+  <div id="modal-bg" style="display:none"></div>
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const historyBtn = document.getElementById('history-btn');
+    const favBtn = document.getElementById('fav-btn');
+    const modalBg = document.getElementById('modal-bg');
+    const xpValue = document.getElementById('xp-value');
+    let xp = parseInt(localStorage.getItem('ai_tutor_xp') || '0', 10);
+
+    // ประวัติและคำถามโปรด
+    let history = JSON.parse(localStorage.getItem('ai_tutor_history') || '[]');
+    let favorites = JSON.parse(localStorage.getItem('ai_tutor_favorites') || '[]');
+
+    function saveHistory() {
+      localStorage.setItem('ai_tutor_history', JSON.stringify(history));
+    }
+    function saveFavorites() {
+      localStorage.setItem('ai_tutor_favorites', JSON.stringify(favorites));
+    }
+    function saveXP() {
+      localStorage.setItem('ai_tutor_xp', xp);
+      xpValue.textContent = xp;
+    }
+
+    // Modal แสดงประวัติ/โปรด
+    function showModal(title, items, onSelect) {
+      modalBg.innerHTML = `
+        <div class="modal">
+          <button class="close-btn" onclick="document.getElementById('modal-bg').style.display='none'">&times;</button>
+          <h3>${title}</h3>
+          <div>
+            ${items.length === 0 ? '<div style="color:#888">ไม่มีข้อมูล</div>' : items.map((item, i) => `
+              <div style="margin-bottom:10px;">
+                <span style="cursor:pointer;color:#2563eb;" onclick="window._modalSelect(${i})">${item.text}</span>
+                ${onSelect === 'fav' ? `<span class="fav-star filled" title="ลบออกจากโปรด" onclick="window._removeFav(${i})">&#9733;</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      modalBg.style.display = 'flex';
+    }
+
+    // สำหรับ modal callback
+    window._modalSelect = function(idx) {
+      modalBg.style.display = 'none';
+      const item = modalBg._items[idx];
+      input.value = item.text;
+      input.focus();
+    };
+    window._removeFav = function(idx) {
+      favorites.splice(idx, 1);
+      saveFavorites();
+      showModal('คำถามโปรด', favorites, 'fav');
+    };
+
+    // ปุ่มประวัติ
+    historyBtn.onclick = () => {
+      modalBg._items = history;
+      showModal('ประวัติการถาม', history, 'history');
+    };
+    // ปุ่มโปรด
+    favBtn.onclick = () => {
+      modalBg._items = favorites;
+      showModal('คำถามโปรด', favorites, 'fav');
+    };
+
+    // ป้องกัน XSS: sanitize HTML output
+    function sanitizeHTML(str) {
+      const temp = document.createElement('div');
+      temp.textContent = str;
+      return temp.innerHTML;
+    }
+
+    // เพิ่มข้อความในแชท
+    function addMessage(role, text, steps, isFav) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = 'message ' + role;
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      if (steps && Array.isArray(steps)) {
+        // แสดงขั้นตอนแบบลำดับ (เลข/หัวข้อ) พร้อม emoji และสีสัน
+        const list = document.createElement('ol');
+        list.style.margin = '0 0 0 1.2em';
+        list.style.padding = '0';
+        let hasList = false;
+        steps.forEach((step, idx) => {
+          // เพิ่ม emoji อัตโนมัติสำหรับหัวข้อที่พบ
+          let coloredStep = step;
+          if (step.startsWith('<b>Quiz:')) {
+            coloredStep = `<span style="color:#f59e42;font-weight:bold;">🎲 ${step.replace('<b>Quiz:', 'Quiz:').replace('</b>', '')}</span>`;
+          } else if (step.startsWith('<b>Newton')) {
+            coloredStep = `<span style="color:#2563eb;font-weight:bold;">🧲 ${step.replace('<b>', '').replace('</b>', '')}</span>`;
+          } else if (step.startsWith('<b>Present Perfect')) {
+            coloredStep = `<span style="color:#22c55e;font-weight:bold;">📚 ${step.replace('<b>', '').replace('</b>', '')}</span>`;
+          } else if (step.startsWith('<b>Assume')) {
+            coloredStep = `<span style="color:#f472b6;font-weight:bold;">💡 ${step.replace('<b>', '').replace('</b>', '')}</span>`;
+          } else if (step.startsWith('<b>ตอบ:')) {
+            coloredStep = `<span style="color:#f59e42;font-weight:bold;">✅ ${step.replace('<b>', '').replace('</b>', '')}</span>`;
+          } else if (step.startsWith('<i>เฉลย')) {
+            coloredStep = `<span style="color:#22c55e;font-weight:bold;">✨ ${step.replace('<i>', '').replace('</i>', '')}</span>`;
+          } else if (step.startsWith('<i>')) {
+            coloredStep = `<span style="color:#64748b;">💬 ${step.replace('<i>', '').replace('</i>', '')}</span>`;
+          } else if (step.startsWith('<span>Assume')) {
+            coloredStep = `<span style="color:#f472b6;">💡 ${step.replace('<span>', '').replace('</span>', '')}</span>`;
+          } else if (step.startsWith('1.') || step.startsWith('2.') || step.startsWith('3.') || step.startsWith('4.') || step.startsWith('5.')) {
+            // เพิ่มสีให้แต่ละข้อ
+            const colors = ['#60a5fa', '#f59e42', '#22c55e', '#f472b6', '#a78bfa'];
+            const color = colors[idx % colors.length];
+            coloredStep = `<span style="color:${color};font-weight:500;">${step}</span>`;
+          }
+          // ถ้าเป็นหัวข้อหรือเฉลย ให้แสดงแยก
+          if (
+            step.startsWith('<b>') ||
+            step.startsWith('<i>') ||
+            step.startsWith('<span') ||
+            step.startsWith('<div') ||
+            step.startsWith('<hr') ||
+            step.startsWith('<u>')
+          ) {
+            if (hasList) {
+              bubble.appendChild(list);
+              hasList = false;
+              list.innerHTML = '';
+            }
+            const stepDiv = document.createElement('div');
+            stepDiv.className = 'step';
+            stepDiv.innerHTML = coloredStep;
+            bubble.appendChild(stepDiv);
+          } else {
+            // แสดงเป็นรายการลำดับ
+            const li = document.createElement('li');
+            li.className = 'step';
+            li.innerHTML = coloredStep;
+            list.appendChild(li);
+            hasList = true;
+          }
+        });
+        if (hasList) bubble.appendChild(list);
+      } else {
+        // ปลอดภัย: sanitize ข้อความจาก user/AI
+        bubble.innerHTML = sanitizeHTML(text);
+      }
+      // เพิ่มปุ่ม favorite เฉพาะข้อความ user
+      if (role === 'user') {
+        const star = document.createElement('span');
+        star.className = 'fav-star' + (isFav ? ' filled' : '');
+        star.innerHTML = '&#9733;';
+        star.title = isFav ? 'ลบออกจากโปรด' : 'เพิ่มเป็นโปรด';
+        star.onclick = () => {
+          if (isFav) {
+            favorites = favorites.filter(f => f.text !== text);
+          } else {
+            favorites.push({ text });
+          }
+          saveFavorites();
+          renderChat();
+        };
+        bubble.appendChild(star);
+      }
+      msgDiv.appendChild(bubble);
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+      if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    // แสดงใหม่ทั้งแชท (ใช้ตอน favorite เปลี่ยน)
+    function renderChat() {
+      chat.innerHTML = '';
+      // Quiz button
+      addQuizButton();
+      // แสดงข้อความจาก history (user/ai สลับ)
+      for (let i = 0; i < history.length; ++i) {
+        const h = history[i];
+        addMessage(h.role, h.text, h.steps, favorites.some(f => f.text === h.text));
+      }
+    }
+
+    // ตัวอย่างฟีเจอร์ Quiz AI
+    function addQuizButton() {
+      if (document.getElementById('quiz-btn')) return;
+      const btn = document.createElement('button');
+      btn.textContent = '🎲 Quiz AI';
+      btn.className = 'quiz-btn';
+      btn.id = 'quiz-btn';
+      btn.onclick = () => {
+        addMessage('user', 'สุ่มคำถามให้หน่อย');
+        aiRespond('quiz');
+        history.push({ role: 'user', text: 'สุ่มคำถามให้หน่อย' });
+        saveHistory();
+        addXP(5); // ได้ XP เมื่อขอ quiz
+      };
+      chat.appendChild(btn);
+    }
+
+    const GEMINI_API_KEY = 'AIzaSyA35LCCnO0RQm4zhBJrZZPZSRIJoQvd610'; // ใส่ API KEY ของคุณแทนที่ข้อความนี้
+
+    async function geminiAI(prompt) {
+      if (!GEMINI_API_KEY || GEMINI_API_KEY === 'GEMINI_API_KEY') {
+        return null;
+      }
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const body = {
+        contents: [{ parts: [{ text: prompt }] }]
+      };
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+          return data.candidates[0].content.parts.map(p => p.text).join('\n');
+        }
+        return null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // ตัวอย่าง AI ตอบ (mockup)
+    async function aiRespond(typeOrText) {
+      if (typeOrText === 'quiz') {
+        const steps = [
+          '<b>Quiz:</b> จงแก้สมการ <span>2x + 5 = 11</span>',
+          '1. ย้าย 5 ไปอีกข้าง: <span>2x = 11 - 5</span>',
+          '2. คำนวณ: <span>2x = 6</span>',
+          '3. หารด้วย 2: <span>x = 3</span>',
+          '<i>เฉลย: x = 3</i>'
+        ];
+        addMessage('ai', '', steps);
+        history.push({ role: 'ai', text: '', steps });
+        saveHistory();
+        return;
+      }
+      const text = typeOrText.trim();
+      if (GEMINI_API_KEY && GEMINI_API_KEY !== 'GEMINI_API_KEY') {
+        addMessage('ai', '<i>กำลังคิดคำตอบ...</i>');
+        const aiMsgDiv = chat.lastChild;
+        try {
+          const aiText = await geminiAI(text);
+          if (aiText && aiText.trim()) {
+            // ปลอดภัย: sanitize output จาก AI
+            aiMsgDiv.querySelector('.bubble').innerHTML = sanitizeHTML(aiText).replace(/\n/g, '<br>');
+            if (window.MathJax) MathJax.typesetPromise();
+            history.push({ role: 'ai', text: aiText });
+            saveHistory();
+            return;
+          }
+          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้';
+          history.push({ role: 'ai', text: 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้' });
+          saveHistory();
+        } catch (e) {
+          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย เกิดข้อผิดพลาด';
+          history.push({ role: 'ai', text: 'ขออภัย เกิดข้อผิดพลาด' });
+          saveHistory();
+        }
+        return;
+      }
+      // fallback เฉพาะกรณีไม่มี API KEY
+      let steps;
+      if (/สมการ|x|y|แก้|equation/i.test(text)) {
+        steps = [
+          '1. เขียนสมการ: <span>\\(x^2 + 3x = 0\\)</span>',
+          '2. แยกตัวประกอบ: <span>\\(x(x + 3) = 0\\)</span>',
+          '3. ดังนั้น <span>\\(x = 0\\)</span> หรือ <span>\\(x = -3\\)</span>',
+          '<b>ตอบ:</b> <span>\\(x = 0, -3\\)</span>'
+        ];
+      } else if (/แปล|translate|assume/i.test(text)) {
+        steps = [
+          '<b>Assume</b> (v.) = สมมติ, สันนิษฐาน',
+          '<i>ตัวอย่าง:</i> <span>Assume that x = 2.</span> = สมมติว่า x = 2'
+        ];
+      } else if (/present perfect|แกรมม่า|grammar/i.test(text)) {
+        steps = [
+          '<b>Present Perfect</b> ใช้กับเหตุการณ์ที่เกิดขึ้นในอดีตและมีผลถึงปัจจุบัน',
+          'โครงสร้าง: <span>have/has + V3</span>',
+          'ตัวอย่าง: <span>I have finished my homework.</span>'
+        ];
+      } else if (/สรุป|บท|laws|คือ/i.test(text)) {
+        steps = [
+          '<b>Newton’s Laws</b> คือ กฎการเคลื่อนที่ของนิวตัน 3 ข้อ',
+          '1. วัตถุอยู่นิ่งหรือเคลื่อนที่ด้วยความเร็วคงที่ หากไม่มีแรงมากระทำ',
+          '2. <span>F = ma</span> (แรง = มวล × ความเร่ง)',
+          '3. ทุกแรงมีแรงตรงข้ามเท่ากันและตรงข้าม'
+        ];
+      } else {
+        steps = ['<span style="color:#f59e42">ขออภัย ไม่มี AI อัตโนมัติ (Gemini) กรุณาตั้งค่า API KEY หรือถามเรื่องคณิต, ภาษา, สรุปบท, หรือขอ Quiz ได้เลยครับ</span>'];
+      }
+      addMessage('ai', '', steps);
+      history.push({ role: 'ai', text: '', steps });
+      saveHistory();
+      if (window.MathJax) MathJax.typesetPromise();
+    }
+
+    // ส่งข้อความ
+    function send() {
+      const val = input.value.trim();
+      if (!val) return;
+      addMessage('user', val, null, favorites.some(f => f.text === val));
+      history.push({ role: 'user', text: val });
+      saveHistory();
+      aiRespond(val);
+      input.value = '';
+      addXP(2); // ได้ XP เมื่อถามคำถาม
+    }
+
+    sendBtn.onclick = send;
+    input.onkeydown = e => { if (e.key === 'Enter') send(); };
+
+    // เริ่มต้น
+    window.onload = () => {
+      if (history.length === 0) {
+        addMessage('ai', '👋 สวัสดี! ฉันคือ AI Tutor ถามโจทย์คณิต, แปลภาษา, สรุปบท หรือขอ Quiz ได้เลย');
+        history.push({ role: 'ai', text: '👋 สวัสดี! ฉันคือ AI Tutor ถามโจทย์คณิต, แปลภาษา, สรุปบท หรือขอ Quiz ได้เลย' });
+        saveHistory();
+      }
+      renderChat();
+    };
+
+    // ป้องกัน CSRF/Clickjacking (ฝั่ง client)
+    if (window.top !== window.self) {
+      window.top.location = window.self.location;
+    }
+  </script>
+</body>
+</html>
