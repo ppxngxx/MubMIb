@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>ติวเตอร์ สำหรับคุณแฟน</title>
+  <title>AI Tutor | ติวเตอร์ AI</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&family=Prompt:wght@500;700&display=swap');
@@ -71,21 +71,6 @@
       background: #2563eb;
       color: #fff;
       border: 2px solid #2563eb;
-    }
-    #xp-indicator {
-      margin-left: auto;
-      font-weight: 700;
-      color: #f59e42;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      background: #fff7ed;
-      border-radius: 10px;
-      padding: 6px 16px 6px 12px;
-      box-shadow: 0 1px 4px #f59e4211;
-      font-size: 1.08em;
-      border: 1.5px solid #fbbf24;
-      letter-spacing: 0.01em;
     }
     .chat-messages {
       flex: 1;
@@ -321,10 +306,7 @@
     <div class="top-bar">
       <button class="history-btn" id="history-btn">ประวัติการถาม</button>
       <button class="fav-btn" id="fav-btn">คำถามโปรด</button>
-      <span id="xp-indicator" style="margin-left:auto;font-weight:500;color:#f59e42;display:flex;align-items:center;gap:4px;">
-        <span style="font-size:1.2em;">🏅</span>
-        <span id="xp-value">0</span> XP
-      </span>
+      <!-- ลบ XP indicator -->
     </div>
     <div class="chat-messages" id="chat">
       <!-- ข้อความจะแสดงที่นี่ -->
@@ -342,8 +324,6 @@
     const historyBtn = document.getElementById('history-btn');
     const favBtn = document.getElementById('fav-btn');
     const modalBg = document.getElementById('modal-bg');
-    const xpValue = document.getElementById('xp-value');
-    let xp = parseInt(localStorage.getItem('ai_tutor_xp') || '0', 10);
 
     // ประวัติและคำถามโปรด
     let history = JSON.parse(localStorage.getItem('ai_tutor_history') || '[]');
@@ -354,10 +334,6 @@
     }
     function saveFavorites() {
       localStorage.setItem('ai_tutor_favorites', JSON.stringify(favorites));
-    }
-    function saveXP() {
-      localStorage.setItem('ai_tutor_xp', xp);
-      xpValue.textContent = xp;
     }
 
     // Modal แสดงประวัติ/โปรด
@@ -526,7 +502,7 @@
         aiRespond('quiz');
         history.push({ role: 'user', text: 'สุ่มคำถามให้หน่อย' });
         saveHistory();
-        addXP(5); // ได้ XP เมื่อขอ quiz
+        // ลบ addXP(5);
       };
       chat.appendChild(btn);
     }
@@ -559,13 +535,22 @@
 
     // ตัวอย่าง AI ตอบ (mockup)
     async function aiRespond(typeOrText) {
+      // กำหนด prompt สำหรับ Gemini ให้เป็นแฟนหนุ่มอบอุ่นน่ารัก เรียกผู้ใช้ว่า "อ้วน"
+      const AI_PERSONA_PROMPT = `
+คุณคือแฟนหนุ่มที่อบอุ่นและน่ารักมาก พร้อมช่วยเหลือแฟนสาวสุดความสามารถ
+เวลาตอบคำถามให้เรียกผู้ใช้ว่า "อ้วน" ทุกครั้ง
+ทุกคำตอบควรมี emoji น่ารักๆ ทั้งตอนเริ่มและจบข้อความ เช่น 💖, 🐻, 😘, 🥰, 💡, ✨, 🎉, 💕, ฯลฯ
+ถ้าอ้วนตอบถูกหรือทำสำเร็จ ให้พูดว่า "เก่งมากค่ะอ้วน" พร้อม emoji รัก เช่น 🥰💖
+ตอบแบบกระชับ อบอุ่น เป็นกันเอง และให้กำลังใจ
+`;
+
       if (typeOrText === 'quiz') {
         const steps = [
-          '<b>Quiz:</b> จงแก้สมการ <span>2x + 5 = 11</span>',
+          '<b>Quiz:</b> จงแก้สมการ <span>2x + 5 = 11</span> 🧮',
           '1. ย้าย 5 ไปอีกข้าง: <span>2x = 11 - 5</span>',
           '2. คำนวณ: <span>2x = 6</span>',
           '3. หารด้วย 2: <span>x = 3</span>',
-          '<i>เฉลย: x = 3</i>'
+          '<i>เฉลย: x = 3</i> <span style="color:#f472b6;">เก่งมากค่ะอ้วน 🥰💖</span>'
         ];
         addMessage('ai', '', steps);
         history.push({ role: 'ai', text: '', steps });
@@ -574,24 +559,32 @@
       }
       const text = typeOrText.trim();
       if (GEMINI_API_KEY && GEMINI_API_KEY !== 'GEMINI_API_KEY') {
-        addMessage('ai', '<i>กำลังคิดคำตอบ...</i>');
+        addMessage('ai', '<i>กำลังคิดคำตอบให้อ้วนนะคะ... 🐻💭</i>');
         const aiMsgDiv = chat.lastChild;
         try {
-          const aiText = await geminiAI(text);
+          // ส่ง prompt บุคลิกแฟนหนุ่ม + คำถามจริง
+          const aiText = await geminiAI(`${AI_PERSONA_PROMPT}\n\nคำถาม: ${text}`);
           if (aiText && aiText.trim()) {
-            // ปลอดภัย: sanitize output จาก AI
-            aiMsgDiv.querySelector('.bubble').innerHTML = sanitizeHTML(aiText).replace(/\n/g, '<br>');
+            // ใส่ emoji เปิด/ปิด ถ้ายังไม่มี
+            let msg = aiText.trim();
+            if (!/^[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]/.test(msg)) {
+              msg = '🥰 ' + msg;
+            }
+            if (!/[\uD800-\uDBFF][\uDC00-\uDFFF]|[\u2600-\u27BF]$/.test(msg)) {
+              msg = msg + ' 💖';
+            }
+            aiMsgDiv.querySelector('.bubble').innerHTML = sanitizeHTML(msg).replace(/\n/g, '<br>');
             if (window.MathJax) MathJax.typesetPromise();
-            history.push({ role: 'ai', text: aiText });
+            history.push({ role: 'ai', text: msg });
             saveHistory();
             return;
           }
-          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้';
-          history.push({ role: 'ai', text: 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้' });
+          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้ 😢';
+          history.push({ role: 'ai', text: 'ขออภัย ไม่สามารถเชื่อมต่อ AI ได้ 😢' });
           saveHistory();
         } catch (e) {
-          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย เกิดข้อผิดพลาด';
-          history.push({ role: 'ai', text: 'ขออภัย เกิดข้อผิดพลาด' });
+          aiMsgDiv.querySelector('.bubble').innerHTML = 'ขออภัย เกิดข้อผิดพลาด 😢';
+          history.push({ role: 'ai', text: 'ขออภัย เกิดข้อผิดพลาด 😢' });
           saveHistory();
         }
         return;
@@ -600,31 +593,37 @@
       let steps;
       if (/สมการ|x|y|แก้|equation/i.test(text)) {
         steps = [
+          '<b>โจทย์คณิตสำหรับอ้วน 🧮</b>',
           '1. เขียนสมการ: <span>\\(x^2 + 3x = 0\\)</span>',
           '2. แยกตัวประกอบ: <span>\\(x(x + 3) = 0\\)</span>',
           '3. ดังนั้น <span>\\(x = 0\\)</span> หรือ <span>\\(x = -3\\)</span>',
-          '<b>ตอบ:</b> <span>\\(x = 0, -3\\)</span>'
+          '<b>ตอบ:</b> <span>\\(x = 0, -3\\)</span> <span style="color:#f472b6;">เก่งมากค่ะอ้วน 🥰💖</span>'
         ];
       } else if (/แปล|translate|assume/i.test(text)) {
         steps = [
-          '<b>Assume</b> (v.) = สมมติ, สันนิษฐาน',
-          '<i>ตัวอย่าง:</i> <span>Assume that x = 2.</span> = สมมติว่า x = 2'
+          '<b>Assume</b> (v.) = สมมติ, สันนิษฐาน 💡',
+          '<i>ตัวอย่าง:</i> <span>Assume that x = 2.</span> = สมมติว่า x = 2',
+          '<span style="color:#f472b6;">อ้วนอยากรู้อะไรอีกถามได้เลยนะคะ 😘💕</span>'
         ];
       } else if (/present perfect|แกรมม่า|grammar/i.test(text)) {
         steps = [
-          '<b>Present Perfect</b> ใช้กับเหตุการณ์ที่เกิดขึ้นในอดีตและมีผลถึงปัจจุบัน',
+          '<b>Present Perfect</b> ใช้กับเหตุการณ์ที่เกิดขึ้นในอดีตและมีผลถึงปัจจุบัน 📚',
           'โครงสร้าง: <span>have/has + V3</span>',
-          'ตัวอย่าง: <span>I have finished my homework.</span>'
+          'ตัวอย่าง: <span>I have finished my homework.</span>',
+          '<span style="color:#f472b6;">อ้วนเก่งมากเลยค่ะ ✨💖</span>'
         ];
       } else if (/สรุป|บท|laws|คือ/i.test(text)) {
         steps = [
-          '<b>Newton’s Laws</b> คือ กฎการเคลื่อนที่ของนิวตัน 3 ข้อ',
+          '<b>Newton’s Laws</b> คือ กฎการเคลื่อนที่ของนิวตัน 3 ข้อ 🧲',
           '1. วัตถุอยู่นิ่งหรือเคลื่อนที่ด้วยความเร็วคงที่ หากไม่มีแรงมากระทำ',
           '2. <span>F = ma</span> (แรง = มวล × ความเร่ง)',
-          '3. ทุกแรงมีแรงตรงข้ามเท่ากันและตรงข้าม'
+          '3. ทุกแรงมีแรงตรงข้ามเท่ากันและตรงข้าม',
+          '<span style="color:#f472b6;">อ้วนสุดยอดเลยค่ะ 💕</span>'
         ];
       } else {
-        steps = ['<span style="color:#f59e42">ขออภัย ไม่มี AI อัตโนมัติ (Gemini) กรุณาตั้งค่า API KEY หรือถามเรื่องคณิต, ภาษา, สรุปบท, หรือขอ Quiz ได้เลยครับ</span>'];
+        steps = [
+          '<span style="color:#f59e42">อ้วนจ๋า ฟีเจอร์นี้ยังไม่รองรับคำถามนี้โดยตรง แต่ถามเรื่องคณิต, ภาษา, สรุปบท, หรือขอ Quiz ได้เลยนะคะ 🥰✨</span>'
+        ];
       }
       addMessage('ai', '', steps);
       history.push({ role: 'ai', text: '', steps });
@@ -641,7 +640,7 @@
       saveHistory();
       aiRespond(val);
       input.value = '';
-      addXP(2); // ได้ XP เมื่อถามคำถาม
+      // ลบ addXP(2);
     }
 
     sendBtn.onclick = send;
